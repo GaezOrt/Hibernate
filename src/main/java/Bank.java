@@ -29,5 +29,16 @@ public class Bank {
     public void setName(String name) {
         this.name = name;
     }
+
+    @Column(name="edad")
+    private Integer edad;
+
+    public Integer getEdad() {
+        return edad;
+    }
+
+    public void setEdad(Integer edad) {
+        this.edad = edad;
+    }
 }
 
