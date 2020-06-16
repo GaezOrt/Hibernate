@@ -1,11 +1,15 @@
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+
 import javax.persistence.*;
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 
 public class Main {
+    static int x;
 
     public static void main(String[] args) {
 
@@ -26,29 +30,34 @@ public class Main {
         frame.add(panel);
         frame.setSize(200, 200);
         frame.setVisible(true);
+
+
         register.addActionListener(e -> {
-            Client client = new Client();
-            client.setName(name.getText());
-            client.setId(Integer.parseInt(id.getText()));
-            Thread thread = new Thread(() -> {
-                EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
+            if (register.isEnabled()) {
                 SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
 
+                Client client = new Client();
+                client.setName(name.getText());
+                client.setId(Integer.parseInt(id.getText()));
                 Session session = sessionFactory.openSession();
                 session.beginTransaction();
-                System.out.println(session.get(Bank.class, 2).getName());
+                System.out.println("XD");
+                System.out.println(session.get(Bank.class, client.getId()).getName());
+                }
 
+        });
 
+                /*
+                EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
                 EntityManager entityManager = entityManagerFactory.createEntityManager();
                 entityManager.getTransaction().begin();
                 entityManager.persist(client);
                 entityManager.getTransaction().commit();
                 entityManagerFactory.close();
-            });
-            thread.start();
 
 
-        });
+                 */
+
 
     }
 }

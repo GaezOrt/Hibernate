@@ -5,7 +5,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "bank_table")
 public class Bank {
-    @Id
+
     @Column(name = "id")
     @GeneratedValue(generator = "incremetor")
     @GenericGenerator(name="incrementor",strategy = "increment")
@@ -39,6 +39,27 @@ public class Bank {
 
     public void setEdad(Integer edad) {
         this.edad = edad;
+    }
+    @Column(name="money")
+    private Integer money;
+
+    public Integer getMoney() {
+        return money;
+    }
+
+    public void setMoney(Integer money) {
+        this.money = money;
+    }
+    @Id
+    @Column(name="idcertificate")
+    private int idCertificate;
+
+    public int getIdCertificate() {
+        return idCertificate;
+    }
+
+    public void setIdCertificate(int idCertificate) {
+        this.idCertificate = idCertificate;
     }
 }
 

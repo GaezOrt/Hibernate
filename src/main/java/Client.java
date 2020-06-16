@@ -8,7 +8,8 @@ import javax.persistence.Table;
 public class Client {
     @Id
     @Column(name="id")
-    private Integer id;
+    private int id;
+
 
     public Integer getId() {
         return id;
@@ -28,4 +29,6 @@ public class Client {
     public void setName(String name) {
         this.name = name;
     }
+
+
 }
