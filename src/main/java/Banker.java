@@ -4,11 +4,11 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
-import org.hibernate.query.Query;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import javax.persistence.Query;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -40,19 +40,20 @@ public class Banker {
             if (searchButton.isEnabled()) {
                 EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
                 SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+                EntityManager entityManager = entityManagerFactory.createEntityManager();
 
                 Session session = sessionFactory.openSession();
                 session.beginTransaction();
                 System.out.println("XD");
                 Bank bank = new Bank();
                 bank.setConnected(true);
-                Query query= session.createQuery("from Bank where connecteed = true");
-
+                Query query= entityManager.createQuery("from Bank where connecteed = true");
 
                 //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
 
-                List list= query.getResultList();
-                System.out.println(list.size());
+                List<Bank> list= query.getResultList();
+
+                System.out.println(list.get(0).getName());
                 session.getTransaction().commit();
                 session.close();
               //  bank.setIdCertificate(Integer.parseInt(identificationNumber.getText()));
