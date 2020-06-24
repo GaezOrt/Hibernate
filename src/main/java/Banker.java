@@ -4,6 +4,7 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.query.Query;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -12,6 +13,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 public class Banker {
 
@@ -28,13 +30,13 @@ public class Banker {
     public JLabel Age;
     public JLabel Money;
     public JLabel idLabel;
+    private JList list1;
 
     public void init() {
         JFrame frame = new JFrame();
         frame.setSize(400, 400);
         frame.setContentPane(panel);
         frame.setVisible(true);
-        searchButton.addActionListener(e -> {
             if (searchButton.isEnabled()) {
                 EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
                 SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
@@ -43,13 +45,22 @@ public class Banker {
                 session.beginTransaction();
                 System.out.println("XD");
                 Bank bank = new Bank();
+                bank.setConnected(true);
+                Query query= session.createQuery("from Bank where connecteed = true");
 
-                bank.setIdCertificate(Integer.parseInt(identificationNumber.getText()));
-                name.setText(session.get(Bank.class, bank.getIdCertificate()).getName());
-                Money.setText(session.get(Bank.class, bank.getIdCertificate()).getMoney().toString());
-                Age.setText(session.get(Bank.class, bank.getIdCertificate()).getEdad().toString());
+
+                //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
+
+                List list= query.getResultList();
+                System.out.println(list.size());
+                session.getTransaction().commit();
+                session.close();
+              //  bank.setIdCertificate(Integer.parseInt(identificationNumber.getText()));
+
+              //  name.setText(session.get(Bank.class, bank.getIdCertificate()).getName());
+              //  Money.setText(session.get(Bank.class, bank.getIdCertificate()).getMoney().toString());
+              //  Age.setText(session.get(Bank.class, bank.getIdCertificate()).getEdad().toString());
                }
-        });
 
         registerButton.addActionListener(new ActionListener() {
             @Override
@@ -61,6 +72,7 @@ public class Banker {
                     bank.setName(nameTextField.getText());
                     bank.setEdad(Integer.parseInt(ageTextField.getText()));
                     bank.setMoney(Integer.parseInt(moneyTextField.getText()));
+                    bank.setConnected(true);
                     EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
                     EntityManager entityManager = entityManagerFactory.createEntityManager();
                     entityManager.getTransaction().begin();

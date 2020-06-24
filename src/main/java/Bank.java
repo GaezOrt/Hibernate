@@ -3,7 +3,7 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "bank_table")
+@Table(name = "bank")
 public class Bank {
 
     @Column(name = "id")
@@ -28,6 +28,17 @@ public class Bank {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Column(name = "connecteed", nullable = false, columnDefinition = "TINYINT(1)")
+    private Boolean connected;
+
+    public Boolean isConnected() {
+        return connected;
+    }
+
+    public void setConnected(Boolean connected) {
+        this.connected = connected;
     }
 
     @Column(name="edad")
