@@ -13,6 +13,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Banker {
@@ -54,6 +55,26 @@ public class Banker {
                 List<Bank> list= query.getResultList();
 
                 System.out.println(list.get(0).getName());
+
+
+                 DefaultListModel model = new DefaultListModel();
+                 list1.setModel(model);
+//another thread to update the model
+                final Thread updater = new Thread() {
+                    /* (non-Javadoc)
+                     * @see java.lang.Thread#run()
+                     */
+                    @Override
+                    public void run() {
+
+                      for(int i=0;i<list.size();i++){
+                            model.addElement(list.get(0).getName());
+
+                            i++;
+                        }
+                    }
+                };
+                updater.start();
                 session.getTransaction().commit();
                 session.close();
               //  bank.setIdCertificate(Integer.parseInt(identificationNumber.getText()));
