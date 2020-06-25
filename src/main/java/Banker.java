@@ -9,24 +9,31 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
+import javax.sql.rowset.serial.SerialBlob;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.sql.Blob;
+import java.sql.SQLException;
 import java.util.List;
 
 public class Banker {
 
 
-    private JPanel panel;
-    private JButton searchButton;
-    public JTextField nameTextField;
-    public JTextField IDTextField;
-    public JTextField ageTextField;
-    public JTextField moneyTextField;
-    public JButton registerButton;
-    private JList list1;
-    private JTextField textField1;
+    JPanel panel;
+    JButton searchButton;
+    JTextField nameTextField;
+    JTextField IDTextField;
+    JTextField moneyTextField;
+    JButton registerButton;
+    JList list1;
+    JTextField textField1;
     List<Bank> list;
 
     public void init() {
@@ -35,6 +42,30 @@ public class Banker {
         frame.setContentPane(panel);
         frame.setVisible(true);
 
+        //React when index clicked
+        list1.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent evt) {
+                JList list = (JList) evt.getSource();
+                if (evt.getClickCount() == 2) {
+                    JFileChooser chooser = new JFileChooser();
+                    chooser.showOpenDialog(chooser);
+                    File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
+                    try {
+                        byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
+                        Blob blob = new SerialBlob(fileContent);
+
+                    } catch (IOException | SQLException e) {
+                        e.printStackTrace();
+                    }
+                } else if (evt.getClickCount() == 3) {
+
+                    // Triple-click detected
+                    int index = list.locationToIndex(evt.getPoint());
+                }
+            }
+        });
+
+        //Register user to list
         registerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -61,6 +92,7 @@ public class Banker {
                 }
             }
         });
+
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
         SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
         EntityManager entityManager = entityManagerFactory.createEntityManager();
@@ -71,9 +103,8 @@ public class Banker {
         Bank bank = new Bank();
         bank.setConnected(true);
 
-        DefaultListModel model = new DefaultListModel();
-        list1.setModel(model);
-//another thread to update the model
+
+        //Constantly update list
         final Thread updater = new Thread() {
             /* (non-Javadoc)
              * @see java.lang.Thread#run()
@@ -81,6 +112,8 @@ public class Banker {
             @Override
             public void run() {
                 while (true) {
+                    DefaultListModel model = new DefaultListModel();
+                    list1.setModel(model);
                     Query query = entityManager.createQuery("from Bank where connecteed = true");
 
                     //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
@@ -89,26 +122,25 @@ public class Banker {
 
 
                     for (int i = 0; i < list.size(); i++) {
-                        if(!model.contains(list.get(i).getName()))
-                        model.addElement(list.get(i).getName());
-
+                        if (!model.contains(list.get(i).getName())) {
+                            model.addElement(list.get(i).getName());
+                            session.getTransaction().commit();
+                            session.close();
+                        }
                     }
 
                 }
             }
         };
         updater.start();
-        session.getTransaction().commit();
-        session.close();
-        //  bank.setIdCertificate(Integer.parseInt(identificationNumber.getText()));
+    }
 
-        //  name.setText(session.get(Bank.class, bank.getIdCertificate()).getName());
-        //  Money.setText(session.get(Bank.class, bank.getIdCertificate()).getMoney().toString());
-        //  Age.setText(session.get(Bank.class, bank.getIdCertificate()).getEdad().toString());
+    private void updateRowWithBlob() {
+
     }
 
     private boolean nameExists(List<Bank> list, String name) {
-        if(list==null){
+        if (list == null) {
             return false;
         }
         for (Bank listObject : list) {
@@ -124,10 +156,9 @@ public class Banker {
         new Banker().init();
     }
 
+
     {
-// GUI initializer generated by IntelliJ IDEA GUI Designer
-// >>> IMPORTANT!! <<<
-// DO NOT EDIT OR ADD ANY CODE HERE!
+
         $$$setupUI$$$();
     }
 
@@ -153,7 +184,7 @@ public class Banker {
         IDTextField = new JTextField();
         IDTextField.setText("ID");
         panel.add(IDTextField, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        ageTextField = new JTextField();
+        JTextField ageTextField = new JTextField();
         ageTextField.setText("Age");
         panel.add(ageTextField, new GridConstraints(8, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         moneyTextField = new JTextField();
