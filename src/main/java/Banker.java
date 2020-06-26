@@ -35,7 +35,7 @@ public class Banker {
     JList list1;
     JTextField textField1;
     List<Bank> list;
-
+    static String name;
     public void init() {
         JFrame frame = new JFrame();
         frame.setSize(400, 400);
@@ -45,51 +45,50 @@ public class Banker {
         //React when index clicked
         list1.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                JList list = (JList) evt.getSource();
+                JList lists = (JList) evt.getSource();
                 if (evt.getClickCount() == 2) {
                     JFileChooser chooser = new JFileChooser();
                     chooser.showOpenDialog(chooser);
                     File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
+                    name=list.get(lists.locationToIndex(evt.getPoint())).getName();
                     try {
                         byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
                         Blob blob = new SerialBlob(fileContent);
-
+                        updateRowWithBlob(fileContent);
                     } catch (IOException | SQLException e) {
                         e.printStackTrace();
                     }
                 } else if (evt.getClickCount() == 3) {
 
                     // Triple-click detected
-                    int index = list.locationToIndex(evt.getPoint());
+                    int index = lists.locationToIndex(evt.getPoint());
                 }
             }
         });
 
         //Register user to list
-        registerButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (registerButton.isEnabled()) {
+        registerButton.addActionListener(e -> {
+            if (registerButton.isEnabled()) {
 
-                    Bank bank = new Bank();
+                Bank bank = new Bank();
+                byte[]s=new byte[10];
+                bank.setData(s);
+                bank.setName(textField1.getText());
+                bank.setConnected(true);
+                EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
+                EntityManager entityManager = entityManagerFactory.createEntityManager();
+                entityManager.getTransaction().begin();
+                if (!nameExists(list, bank.getName())) {
+                    System.out.println("Adding");
+                    entityManager.merge(bank);
+                    entityManager.getTransaction().commit();
+                    entityManagerFactory.close();
 
-                    bank.setName(textField1.getText());
-                    bank.setConnected(true);
-                    EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
-                    EntityManager entityManager = entityManagerFactory.createEntityManager();
-                    entityManager.getTransaction().begin();
-                    if (!nameExists(list, bank.getName())) {
-                        System.out.println("Adding");
-                        entityManager.merge(bank);
-                        entityManager.getTransaction().commit();
-                        entityManagerFactory.close();
-
-                    } else {
-                        System.out.println("NO SE PUEDE");
-                    }
-
-
+                } else {
+                    System.out.println("NO SE PUEDE");
                 }
+
+
             }
         });
 
@@ -102,41 +101,53 @@ public class Banker {
         System.out.println("XD");
         Bank bank = new Bank();
         bank.setConnected(true);
+        final DefaultListModel model = new DefaultListModel();
+        list1.setModel(model);
 
 
-        //Constantly update list
-        final Thread updater = new Thread() {
-            /* (non-Javadoc)
-             * @see java.lang.Thread#run()
-             */
-            @Override
-            public void run() {
-                while (true) {
-                    DefaultListModel model = new DefaultListModel();
-                    list1.setModel(model);
-                    Query query = entityManager.createQuery("from Bank where connecteed = true");
+        final Thread updater = new Thread(() -> {
+            while (true) {
+                Query query = entityManager.createQuery("from Bank where connecteed = true");
 
-                    //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
+                //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
 
-                    list = query.getResultList();
+                list = query.getResultList();
 
 
-                    for (int i = 0; i < list.size(); i++) {
-                        if (!model.contains(list.get(i).getName())) {
-                            model.addElement(list.get(i).getName());
-                            session.getTransaction().commit();
-                            session.close();
-                        }
+                for (int i = 0; i < list.size(); i++) {
+                    if (!model.contains(list.get(i).getName())) {
+                        model.addElement(list.get(i).getName());
+
                     }
-
                 }
+
             }
-        };
+        });
+        session.getTransaction().commit();
+        session.close();
         updater.start();
     }
 
-    private void updateRowWithBlob() {
+    private void updateRowWithBlob(byte[] data) {
+        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
+        SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
 
+        Session session = sessionFactory.openSession();
+        session.beginTransaction();
+
+
+        Query query = entityManager.createQuery("from Bank where name = :namee");
+        query.setParameter("namee",name);
+        List<Bank> bank= query.getResultList();
+        if(bank!=null) {
+            bank.get(0).setData(data);
+            System.out.println("Setting data");
+            System.out.println(bank.get(0).getId());
+            session.update(bank.get(0));
+            session.getTransaction().commit();
+            session.close();
+        }
     }
 
     private boolean nameExists(List<Bank> list, String name) {
@@ -162,13 +173,6 @@ public class Banker {
         $$$setupUI$$$();
     }
 
-    /**
-     * Method generated by IntelliJ IDEA GUI Designer
-     * >>> IMPORTANT!! <<<
-     * DO NOT edit this method OR call it in your code!
-     *
-     * @noinspection ALL
-     */
     private void $$$setupUI$$$() {
         panel = new JPanel();
         panel.setLayout(new GridLayoutManager(10, 3, new Insets(0, 0, 0, 0), -1, -1));
@@ -207,9 +211,7 @@ public class Banker {
         panel.add(label4, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
-    /**
-     * @noinspection ALL
-     */
+
     public JComponent $$$getRootComponent$$$() {
         return panel;
     }

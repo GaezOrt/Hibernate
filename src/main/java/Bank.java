@@ -40,7 +40,7 @@ public class Bank {
     public void setConnected(Boolean connected) {
         this.connected = connected;
     }
-    @Column(name = "DATA", unique = false, nullable = false, length = 100000)
+    @Column(name = "DATA", unique = false, length = 100000)
     private byte[] data;
 
     public byte[] getData() {
