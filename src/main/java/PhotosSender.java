@@ -5,27 +5,27 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
+import javax.imageio.ImageIO;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
-import javax.sql.rowset.serial.SerialBlob;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.sql.Blob;
-import java.sql.SQLException;
 import java.util.List;
 
-public class Banker {
+public class PhotosSender {
 
-
+    static String fileName;
     JPanel panel;
     JButton searchButton;
     JTextField nameTextField;
@@ -36,11 +36,35 @@ public class Banker {
     JTextField textField1;
     List<Bank> list;
     static String name;
-    public void init() {
+    EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
+    SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+    EntityManager entityManager = entityManagerFactory.createEntityManager();
+
+    public void init() throws IOException {
         JFrame frame = new JFrame();
         frame.setSize(400, 400);
         frame.setContentPane(panel);
         frame.setVisible(true);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                System.out.println(name);
+                deletingUser(name);
+            }
+        });
+        Thread downloader = new Thread(() -> {
+            while (true) {
+
+                //imageDownloader();
+            }
+        });
+        downloader.setName("Uploader");
+        downloader.start();
 
         //React when index clicked
         list1.addMouseListener(new MouseAdapter() {
@@ -50,12 +74,18 @@ public class Banker {
                     JFileChooser chooser = new JFileChooser();
                     chooser.showOpenDialog(chooser);
                     File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
-                    name=list.get(lists.locationToIndex(evt.getPoint())).getName();
+                    if (list.size() > 2) {
+                        name = list.get(lists.locationToIndex(evt.getPoint()) + 1).getName();
+
+                    } else {
+                        name = list.get(lists.locationToIndex(evt.getPoint())).getName();
+
+                    }
                     try {
                         byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
-                        Blob blob = new SerialBlob(fileContent);
-                        updateRowWithBlob(fileContent);
-                    } catch (IOException | SQLException e) {
+
+                        updateRowWithBlob(fileContent, fileToUpload.getName());
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
                 } else if (evt.getClickCount() == 3) {
@@ -65,24 +95,21 @@ public class Banker {
                 }
             }
         });
-
         //Register user to list
         registerButton.addActionListener(e -> {
             if (registerButton.isEnabled()) {
 
                 Bank bank = new Bank();
-                byte[]s=new byte[10];
+                byte[] s = new byte[10];
                 bank.setData(s);
                 bank.setName(textField1.getText());
                 bank.setConnected(true);
-                EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
-                EntityManager entityManager = entityManagerFactory.createEntityManager();
-                entityManager.getTransaction().begin();
+              entityManager.getTransaction().begin();
                 if (!nameExists(list, bank.getName())) {
+                    name = textField1.getText();
                     System.out.println("Adding");
                     entityManager.merge(bank);
                     entityManager.getTransaction().commit();
-                    entityManagerFactory.close();
 
                 } else {
                     System.out.println("NO SE PUEDE");
@@ -92,43 +119,62 @@ public class Banker {
             }
         });
 
-        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
-        SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
 
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
-        System.out.println("XD");
-        Bank bank = new Bank();
-        bank.setConnected(true);
-        final DefaultListModel model = new DefaultListModel();
-        list1.setModel(model);
+
 
 
         final Thread updater = new Thread(() -> {
+            Session session = sessionFactory.openSession();
+            session.beginTransaction();
+            Query query = entityManager.createQuery("from Bank where connecteed = true");
+            final DefaultListModel model = new DefaultListModel();
+
             while (true) {
-                Query query = entityManager.createQuery("from Bank where connecteed = true");
 
-                //Query query=session.createQuery("SELECT bank_table where connecteed = :checker ");
-
+                Bank bank = new Bank();
+                bank.setConnected(true);
+                list1.setModel(model);
                 list = query.getResultList();
-
 
                 for (int i = 0; i < list.size(); i++) {
                     if (!model.contains(list.get(i).getName())) {
                         model.addElement(list.get(i).getName());
-
+                        System.out.println("XD");
                     }
                 }
 
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
+
         });
-        session.getTransaction().commit();
-        session.close();
         updater.start();
+         }
+
+    private void updateRowWithBlob(byte[] data, String filename) {
+       Session session = sessionFactory.openSession();
+        session.beginTransaction();
+
+
+        Query query = entityManager.createQuery("from Bank where name = :namee");
+        query.setParameter("namee", name);
+        List<Bank> bank = query.getResultList();
+        if (bank != null) {
+            bank.get(0).setFileName(filename);
+            bank.get(0).setData(data);
+            System.out.println("Setting data");
+            System.out.println(bank.get(0).getId());
+            session.update(bank.get(0));
+            session.getTransaction().commit();
+            session.close();
+            }
     }
 
-    private void updateRowWithBlob(byte[] data) {
+    void deletingUser(String name) {
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
         SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
         EntityManager entityManager = entityManagerFactory.createEntityManager();
@@ -138,16 +184,41 @@ public class Banker {
 
 
         Query query = entityManager.createQuery("from Bank where name = :namee");
-        query.setParameter("namee",name);
-        List<Bank> bank= query.getResultList();
-        if(bank!=null) {
-            bank.get(0).setData(data);
-            System.out.println("Setting data");
-            System.out.println(bank.get(0).getId());
-            session.update(bank.get(0));
+        query.setParameter("namee", name);
+        List<Bank> bank = query.getResultList();
+        if (bank != null) {
+            session.delete(bank.get(0));
             session.getTransaction().commit();
             session.close();
+          }
+    }
+
+    void imageDownloader() throws IOException {
+
+        Session session = sessionFactory.openSession();
+        session.beginTransaction();
+
+        Query query = entityManager.createQuery("from Bank where name = :namee");
+        query.setParameter("namee", "er");
+        List<Bank> bank = query.getResultList();
+        if (bank != null) {
+            if (bank.size() > 0) {
+                ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
+                BufferedImage image = ImageIO.read(bais);
+
+                File outputfile = new File(bank.get(0).getName());
+                outputfile.setWritable(true);
+                ImageIO.write(image, "jpg", outputfile);
+                System.out.println("getting data");
+                bank.get(0).setData(null);
+                bank.get(0).setFileName("");
+                session.update(bank.get(0));
+                session.getTransaction().commit();
+
+                   }
+
         }
+        session.close();
     }
 
     private boolean nameExists(List<Bank> list, String name) {
@@ -163,8 +234,8 @@ public class Banker {
         return false;
     }
 
-    public static void main(String[] args) {
-        new Banker().init();
+    public static void main(String[] args) throws IOException {
+        new PhotosSender().init();
     }
 
 

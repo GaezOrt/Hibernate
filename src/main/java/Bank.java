@@ -30,6 +30,20 @@ public class Bank {
         this.name = name;
     }
 
+
+
+    @Column(name = "filename")
+    private String filename;
+
+    public String getFilename() {
+        return filename;
+    }
+    public void setFileName(String name){
+     this.filename=name;
+    }
+
+
+
     @Column(name = "connecteed", nullable = false, columnDefinition = "TINYINT(1)")
     private Boolean connected;
 
@@ -50,5 +64,6 @@ public class Bank {
     public void setData(byte[] data) {
         this.data = data;
     }
+
 }
 
