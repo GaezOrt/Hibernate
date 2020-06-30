@@ -3,8 +3,8 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "bank")
-public class Bank {
+@Table(name = "user")
+public class User {
     @Id
     @Column(name = "id")
     @GeneratedValue(generator = "incremetor")

@@ -34,10 +34,10 @@ public class PhotosSender {
     JButton registerButton;
     JList list1;
     JTextField textField1;
-    List<Bank> list;
+    List<User> list;
     static String name;
     EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
-    SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+    SessionFactory sessionFactory = new Configuration().addAnnotatedClass(User.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
     EntityManager entityManager = entityManagerFactory.createEntityManager();
 
     public void init() throws IOException {
@@ -74,13 +74,8 @@ public class PhotosSender {
                     JFileChooser chooser = new JFileChooser();
                     chooser.showOpenDialog(chooser);
                     File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
-                    if (list.size() > 2) {
                         name = list.get(lists.locationToIndex(evt.getPoint()) + 1).getName();
 
-                    } else {
-                        name = list.get(lists.locationToIndex(evt.getPoint())).getName();
-
-                    }
                     try {
                         byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
 
@@ -99,7 +94,7 @@ public class PhotosSender {
         registerButton.addActionListener(e -> {
             if (registerButton.isEnabled()) {
 
-                Bank bank = new Bank();
+                User bank = new User();
                 byte[] s = new byte[10];
                 bank.setData(s);
                 bank.setName(textField1.getText());
@@ -126,12 +121,12 @@ public class PhotosSender {
         final Thread updater = new Thread(() -> {
             Session session = sessionFactory.openSession();
             session.beginTransaction();
-            Query query = entityManager.createQuery("from Bank where connecteed = true");
-            final DefaultListModel model = new DefaultListModel();
+             final DefaultListModel model = new DefaultListModel();
 
             while (true) {
+                Query query = entityManager.createQuery("from User where connecteed = true");
 
-                Bank bank = new Bank();
+                User bank = new User();
                 bank.setConnected(true);
                 list1.setModel(model);
                 list = query.getResultList();
@@ -160,9 +155,9 @@ public class PhotosSender {
         session.beginTransaction();
 
 
-        Query query = entityManager.createQuery("from Bank where name = :namee");
+        Query query = entityManager.createQuery("from User where name = :namee");
         query.setParameter("namee", name);
-        List<Bank> bank = query.getResultList();
+        List<User> bank = query.getResultList();
         if (bank != null) {
             bank.get(0).setFileName(filename);
             bank.get(0).setData(data);
@@ -170,26 +165,24 @@ public class PhotosSender {
             System.out.println(bank.get(0).getId());
             session.update(bank.get(0));
             session.getTransaction().commit();
-            session.close();
             }
     }
 
     void deletingUser(String name) {
         EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
-        SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+        SessionFactory sessionFactory = new Configuration().addAnnotatedClass(User.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
         EntityManager entityManager = entityManagerFactory.createEntityManager();
 
         Session session = sessionFactory.openSession();
         session.beginTransaction();
 
 
-        Query query = entityManager.createQuery("from Bank where name = :namee");
+        Query query = entityManager.createQuery("from User where name = :namee");
         query.setParameter("namee", name);
-        List<Bank> bank = query.getResultList();
+        List<User> bank = query.getResultList();
         if (bank != null) {
             session.delete(bank.get(0));
             session.getTransaction().commit();
-            session.close();
           }
     }
 
@@ -200,7 +193,7 @@ public class PhotosSender {
 
         Query query = entityManager.createQuery("from Bank where name = :namee");
         query.setParameter("namee", "er");
-        List<Bank> bank = query.getResultList();
+        List<User> bank = query.getResultList();
         if (bank != null) {
             if (bank.size() > 0) {
                 ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
@@ -221,11 +214,11 @@ public class PhotosSender {
         session.close();
     }
 
-    private boolean nameExists(List<Bank> list, String name) {
+    private boolean nameExists(List<User> list, String name) {
         if (list == null) {
             return false;
         }
-        for (Bank listObject : list) {
+        for (User listObject : list) {
             if (listObject.getName().equals(name)) {
                 return true;
             }

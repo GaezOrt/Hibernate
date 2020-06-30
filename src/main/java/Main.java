@@ -2,10 +2,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
-import javax.persistence.*;
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 
 public class Main {
@@ -34,7 +31,7 @@ public class Main {
 
         register.addActionListener(e -> {
             if (register.isEnabled()) {
-                SessionFactory sessionFactory = new Configuration().addAnnotatedClass(Bank.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
+                SessionFactory sessionFactory = new Configuration().addAnnotatedClass(User.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
 
                 Client client = new Client();
                 client.setName(name.getText());
@@ -42,7 +39,7 @@ public class Main {
                 Session session = sessionFactory.openSession();
                 session.beginTransaction();
                 System.out.println("XD");
-                System.out.println(session.get(Bank.class, client.getId()).getName());
+                System.out.println(session.get(User.class, client.getId()).getName());
                 }
 
         });
