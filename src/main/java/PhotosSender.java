@@ -4,6 +4,7 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.stat.Statistics;
 
 import javax.imageio.ImageIO;
 import javax.persistence.EntityManager;
@@ -39,6 +40,7 @@ public class PhotosSender {
     EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
     SessionFactory sessionFactory = new Configuration().addAnnotatedClass(User.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
     EntityManager entityManager = entityManagerFactory.createEntityManager();
+    Query query = entityManager.createQuery("from User where connecteed = true");
 
     public void init() throws IOException {
         JFrame frame = new JFrame();
@@ -58,10 +60,9 @@ public class PhotosSender {
             }
         });
         Thread downloader = new Thread(() -> {
-            while (true) {
 
-                //imageDownloader();
-            }
+              //imageDownloader();
+
         });
         downloader.setName("Uploader");
         downloader.start();
@@ -74,7 +75,7 @@ public class PhotosSender {
                     JFileChooser chooser = new JFileChooser();
                     chooser.showOpenDialog(chooser);
                     File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
-                        name = list.get(lists.locationToIndex(evt.getPoint()) + 1).getName();
+                    name = list.get(lists.locationToIndex(evt.getPoint())).getName();
 
                     try {
                         byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
@@ -99,12 +100,13 @@ public class PhotosSender {
                 bank.setData(s);
                 bank.setName(textField1.getText());
                 bank.setConnected(true);
-              entityManager.getTransaction().begin();
+                if (!entityManager.getTransaction().isActive()) {
+                    entityManager.getTransaction().begin();
+                }
                 if (!nameExists(list, bank.getName())) {
                     name = textField1.getText();
                     System.out.println("Adding");
                     entityManager.merge(bank);
-                    entityManager.getTransaction().commit();
 
                 } else {
                     System.out.println("NO SE PUEDE");
@@ -115,17 +117,17 @@ public class PhotosSender {
         });
 
 
-
-
-
         final Thread updater = new Thread(() -> {
+            final DefaultListModel model = new DefaultListModel();
             Session session = sessionFactory.openSession();
-            session.beginTransaction();
-             final DefaultListModel model = new DefaultListModel();
 
             while (true) {
-                Query query = entityManager.createQuery("from User where connecteed = true");
-
+                if (!session.getTransaction().isActive()) {
+                    session.beginTransaction();
+                }
+                if(!session.isOpen()){
+                    session=sessionFactory.openSession();
+                }
                 User bank = new User();
                 bank.setConnected(true);
                 list1.setModel(model);
@@ -137,25 +139,24 @@ public class PhotosSender {
                         System.out.println("XD");
                     }
                 }
-
-
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
             }
 
         });
         updater.start();
-         }
+    }
 
     private void updateRowWithBlob(byte[] data, String filename) {
-       Session session = sessionFactory.openSession();
+        Session session = sessionFactory.openSession();
         session.beginTransaction();
 
 
-        Query query = entityManager.createQuery("from User where name = :namee");
+         query = entityManager.createQuery("from User where name = :namee");
         query.setParameter("namee", name);
         List<User> bank = query.getResultList();
         if (bank != null) {
@@ -165,7 +166,8 @@ public class PhotosSender {
             System.out.println(bank.get(0).getId());
             session.update(bank.get(0));
             session.getTransaction().commit();
-            }
+            session.close();
+        }
     }
 
     void deletingUser(String name) {
@@ -183,35 +185,38 @@ public class PhotosSender {
         if (bank != null) {
             session.delete(bank.get(0));
             session.getTransaction().commit();
-          }
+        }
     }
 
     void imageDownloader() throws IOException {
-
+        Statistics stats = sessionFactory.getStatistics();
+        stats.setStatisticsEnabled(true);
         Session session = sessionFactory.openSession();
         session.beginTransaction();
+while(true) {
+    System.out.println("Number of active connections "+stats.getSessionOpenCount());
 
-        Query query = entityManager.createQuery("from Bank where name = :namee");
-        query.setParameter("namee", "er");
-        List<User> bank = query.getResultList();
-        if (bank != null) {
-            if (bank.size() > 0) {
-                ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
-                BufferedImage image = ImageIO.read(bais);
+    query = entityManager.createQuery("from User where name = :namee");
+    query.setParameter("namee", "er");
+    List<User> bank = query.getResultList();
+    if (bank != null) {
+        if (bank.size() > 0) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
+            BufferedImage image = ImageIO.read(bais);
 
-                File outputfile = new File(bank.get(0).getName());
-                outputfile.setWritable(true);
-                ImageIO.write(image, "jpg", outputfile);
-                System.out.println("getting data");
-                bank.get(0).setData(null);
-                bank.get(0).setFileName("");
-                session.update(bank.get(0));
-                session.getTransaction().commit();
-
-                   }
+            File outputfile = new File(bank.get(0).getName());
+            outputfile.setWritable(true);
+            ImageIO.write(image, "jpg", outputfile);
+            System.out.println("getting data");
+            bank.get(0).setData(null);
+            bank.get(0).setFileName("");
+            session.update(bank.get(0));
+            session.getTransaction().commit();
 
         }
-        session.close();
+
+    }
+}
     }
 
     private boolean nameExists(List<User> list, String name) {
