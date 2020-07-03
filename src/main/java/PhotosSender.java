@@ -36,13 +36,16 @@ public class PhotosSender {
     JList list1;
     JTextField textField1;
     List<User> list;
-    static String name;
+    static String ownName;
+    static String nameToUploadFile;
     EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("org.hibernate.tutorial.jpa");
     SessionFactory sessionFactory = new Configuration().addAnnotatedClass(User.class).addAnnotatedClass(Client.class).configure().buildSessionFactory();
     EntityManager entityManager = entityManagerFactory.createEntityManager();
     Query query = entityManager.createQuery("from User where connecteed = true");
+    Query nameQuery = entityManager.createQuery("from User where name = :namee");
 
     public void init() throws IOException {
+
         JFrame frame = new JFrame();
         frame.setSize(400, 400);
         frame.setContentPane(panel);
@@ -55,39 +58,40 @@ public class PhotosSender {
 
             @Override
             public void windowClosing(WindowEvent e) {
-                System.out.println(name);
-                deletingUser(name);
+                System.out.println(ownName);
+                deletingUser(ownName);
             }
         });
         Thread downloader = new Thread(() -> {
 
-              //imageDownloader();
-
+            try {
+                imageDownloader();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         });
-        downloader.setName("Uploader");
+        downloader.setName("image downloader");
         downloader.start();
 
         //React when index clicked
         list1.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
-                JList lists = (JList) evt.getSource();
+                if( evt.getClickCount()==1){
+                    System.out.println(list1.locationToIndex(evt.getPoint()));
+                    System.out.println(list.get(list1.locationToIndex(evt.getPoint())).getName());
+                }
                 if (evt.getClickCount() == 2) {
                     JFileChooser chooser = new JFileChooser();
                     chooser.showOpenDialog(chooser);
-                    File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
-                    name = list.get(lists.locationToIndex(evt.getPoint())).getName();
-
-                    try {
+                     File fileToUpload = new File(chooser.getSelectedFile().getAbsolutePath());
+                    nameToUploadFile = list.get(list1.locationToIndex(evt.getPoint())).getName();
+                      try {
                         byte[] fileContent = Files.readAllBytes(fileToUpload.toPath());
 
                         updateRowWithBlob(fileContent, fileToUpload.getName());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                } else if (evt.getClickCount() == 3) {
-
-                    // Triple-click detected
-                    int index = lists.locationToIndex(evt.getPoint());
                 }
             }
         });
@@ -104,7 +108,7 @@ public class PhotosSender {
                     entityManager.getTransaction().begin();
                 }
                 if (!nameExists(list, bank.getName())) {
-                    name = textField1.getText();
+                    ownName = textField1.getText();
                     System.out.println("Adding");
                     entityManager.merge(bank);
 
@@ -119,17 +123,8 @@ public class PhotosSender {
 
         final Thread updater = new Thread(() -> {
             final DefaultListModel model = new DefaultListModel();
-            Session session = sessionFactory.openSession();
 
             while (true) {
-                if (!session.getTransaction().isActive()) {
-                    session.beginTransaction();
-                }
-                if(!session.isOpen()){
-                    session=sessionFactory.openSession();
-                }
-                User bank = new User();
-                bank.setConnected(true);
                 list1.setModel(model);
                 list = query.getResultList();
 
@@ -140,7 +135,7 @@ public class PhotosSender {
                     }
                 }
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -152,21 +147,25 @@ public class PhotosSender {
     }
 
     private void updateRowWithBlob(byte[] data, String filename) {
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
 
 
-         query = entityManager.createQuery("from User where name = :namee");
-        query.setParameter("namee", name);
+        query = entityManager.createQuery("from User where name = :namee");
+        query.setParameter("namee", nameToUploadFile);
         List<User> bank = query.getResultList();
         if (bank != null) {
+            System.out.println("Static name to upload setted by click "
+                    +nameToUploadFile);
             bank.get(0).setFileName(filename);
             bank.get(0).setData(data);
             System.out.println("Setting data");
-            System.out.println(bank.get(0).getId());
+            System.out.println(bank.get(0).getName());
+            Session session = sessionFactory.openSession();
+            session.beginTransaction();
+
             session.update(bank.get(0));
             session.getTransaction().commit();
             session.close();
+            System.out.println("Finished uploading file" );
         }
     }
 
@@ -188,35 +187,45 @@ public class PhotosSender {
         }
     }
 
-    void imageDownloader() throws IOException {
+    void imageDownloader() throws InterruptedException {
         Statistics stats = sessionFactory.getStatistics();
         stats.setStatisticsEnabled(true);
-        Session session = sessionFactory.openSession();
-        session.beginTransaction();
-while(true) {
-    System.out.println("Number of active connections "+stats.getSessionOpenCount());
+        while (true) {
+            System.out.println("Number of active connections " + stats.getSessionOpenCount());
+            Thread.sleep(5000);
+            if (ownName != null) {
+                try {
+                    System.out.println("Searching for name " + ownName);
+                    Query sa = entityManager.createQuery("from User where name = :namee");
+                    sa.setParameter("namee", ownName);
 
-    query = entityManager.createQuery("from User where name = :namee");
-    query.setParameter("namee", "er");
-    List<User> bank = query.getResultList();
-    if (bank != null) {
-        if (bank.size() > 0) {
-            ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
-            BufferedImage image = ImageIO.read(bais);
+                    List<User> bank = sa.getResultList();
+                    if (bank != null) {
+                        if (bank.size() > 0 && bank.get(0).getFilename() != null) {
+                            System.out.println("file name"+bank.get(0).getFilename());
+                            ByteArrayInputStream bais = new ByteArrayInputStream(bank.get(0).getData());
+                            BufferedImage image = ImageIO.read(bais);
 
-            File outputfile = new File(bank.get(0).getName());
-            outputfile.setWritable(true);
-            ImageIO.write(image, "jpg", outputfile);
-            System.out.println("getting data");
-            bank.get(0).setData(null);
-            bank.get(0).setFileName("");
-            session.update(bank.get(0));
-            session.getTransaction().commit();
+                            File outputfile = new File(bank.get(0).getFilename());
+                            outputfile.setWritable(true);
+                            ImageIO.write(image, "jpg", outputfile);
+                            System.out.println("getting data");
+                            bank.get(0).setData(null);
+                            bank.get(0).setFileName(null);
 
+                            Session session = sessionFactory.openSession();
+                            session.beginTransaction();
+
+                            session.update(bank.get(0));
+                            session.getTransaction().commit();
+                        }
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
-
-    }
-}
     }
 
     private boolean nameExists(List<User> list, String name) {
